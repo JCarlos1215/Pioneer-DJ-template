@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0,
+    user-scalable=no">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <title>Pioneered DJ Pro Max</title>
+        <style>
+            :root { --bg: #0f0f0f; --panel: #222; --accent: #00ffcc; --text: #eee; --danger: #ff4444; }
+    body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family:
+    system-ui, -apple-system, sans-serif; overflow: hidden; height: 100vh; display: flex;
+    flex-direction: column; user-select: none; -webkit-user-select: none; }
+    header { height: 50px; background: #000; display: flex; align-items: center;
+    justify-content: space-between; padding: 0 20px; font-size: 0.9rem; border-bottom: 2px solid
+    var(--accent); z-index: 10; }
+            .main { display: flex; flex: 1; padding: 15px; gap: 15px; height: calc(100vh - 130px); }
+    .deck { width: 30%; background: var(--panel); border-radius: 15px; display: flex;
+    flex-direction: column; align-items: center; justify-content: space-around; padding: 15px; border:
+    1px solid #333; box-shadow: inset 0 0 15px #000; }
+    .jog { width: 130px; height: 130px; border-radius: 50%; background: radial-gradient(circle,
+    #333 30%, #000 100%); border: 6px solid #444; position: relative; transition: transform 0.1s linear;
+    touch-action: none; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
+    .jog::after { content: ''; position: absolute; top: 5px; left: 50%; width: 4px; height:
+    20px; background: var(--accent); transform: translateX(-50%); }
+    .mixer { width: 40%; background: var(--panel); border-radius: 15px; display: flex;
+    flex-direction: column; align-items: center; justify-content: space-between; padding: 20px 0;
+    border: 1px solid #333; }
+            .faders { display: flex; gap: 30px; height: 180px; align-items: center; }
+            .fader-box { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    input[type=range].dj-fader { -webkit-appearance: none; width: 150px; height: 10px;
+    background: #111; border-radius: 5px; transform: rotate(-90deg); margin: 70px 0; }
+    input[type=range].dj-fader::-webkit-slider-thumb { -webkit-appearance: none; height: 35px;
+    width: 20px; background: #ccc; border: 1px solid #fff; border-radius: 3px; }
+    .fx-bar { height: 80px; background: #050505; display: flex; justify-content: space-around;
+    align-items: center; padding: 0 10px; border-top: 2px solid #333; }
+    .fx-unit { background: #1a1a1a; padding: 8px 15px; border-radius: 6px; border: 1px solid
+    #333; font-size: 0.7rem; text-align: center; cursor: pointer; }
+    .fx-unit.active { border-color: var(--accent); box-shadow: 0 0 10px var(--accent); color:
+    var(--accent); }
+    .btn { background: #444; color: white; border: none; padding: 12px 20px; border-radius: 8px;
+    font-size: 0.8rem; font-weight: bold; cursor: pointer; }
+            .btn-play { background: var(--danger); }
+            .btn-play.active { background: #ff8888; box-shadow: 0 0 15px var(--danger); }
+    @media (max-width: 430px) { .main { flex-direction: column; overflow-y: auto; } .deck,
+    .mixer { width: 100%; height: auto; margin-bottom: 15px; } .faders { height: 220px; } }
+        </style>
+    </head>
+    <body>
+    <header><span>PIONEERED PRO MAX</span><span id="status" style="color: var(--accent)">Toca para
+    Iniciar</span></header>
+        <div class="main">
+    <div class="deck"><div style="font-size:0.7rem">DECK A</div><div class="jog"
+    id="jog-a"></div><div><button class="btn btn-play" id="play-a">PLAY</button><button class="btn"
+    id="cue-a">CUE</button></div></div>
+    <div class="mixer"><div style="font-size:0.7rem">MIXER</div><div class="faders"><div
+    class="fader-box"><input type="range" class="dj-fader" id="vol-a" min="0" max="1" step="0.01"
+    value="0.8"><span>CH A</span></div><div class="fader-box"><input type="range" class="dj-fader"
+    id="vol-b" min="0" max="1" step="0.01" value="0.8"><span>CH B</span></div></div><div
+    style="display:flex; gap:10px"><button class="btn" onclick="beeps(200)">LOW</button><button
+    class="btn" onclick="beeps(400)">MID</button><button class="btn"
+    onclick="beeps(800)">HI</button></div></div>
+    <div class="deck"><div style="font-size:0.7rem">DECK B</div><div class="jog"
+    id="jog-b"></div><div><button class="btn btn-play" id="play-b">PLAY</button><button class="btn"
+    id="cue-b">CUE</button></div></div>
+        </div>
+        <div class="fx-bar">
+            <div class="fx-unit" id="fx-1" onclick="toggleFX('fx-1')">REVERB<br>OFF</div>
+            <div class="fx-unit" id="fx-2" onclick="toggleFX('fx-2')">ECHO<br>OFF</div>
+            <div class="fx-unit" id="fx-3" onclick="toggleFX('fx-3')">FILTER<br>OFF</div>
+        </div>
+        <script>
+    let audioCtx = null, oscs = {a:null, b:null}, gains = {a:null, b:null}, playing = {a:false,
+    b:false};
+    function init() { if(audioCtx) return; audioCtx = new (window.AudioContext ||
+    window.webkitAudioContext)(); document.getElementById('status').innerText = "● LIVE"; gains.a =
+    audioCtx.createGain(); gains.a.connect(audioCtx.destination); gains.b = audioCtx.createGain();
+    gains.b.connect(audioCtx.destination); }
+    function startT(d) { init(); const o = audioCtx.createOscillator(); o.type = 'sawtooth';
+    o.frequency.value = d==='a'?220:222; o.connect(gains[d]); o.start(); oscs[d] = o; }
+            function stopT(d) { if(oscs[d]){ oscs[d].stop(); oscs[d]=null; } }
+    document.getElementById('play-a').onclick = function() { init(); playing.a = !playing.a;
+    this.classList.toggle('active'); playing.a ? startT('a') : stopT('a'); };
+    document.getElementById('play-b').onclick = function() { init(); playing.b = !playing.b;
+    this.classList.toggle('active'); playing.b ? startT('b') : stopT('b'); };
+    document.getElementById('vol-a').oninput = function() { if(gains.a) gains.a.gain.value =
+    this.value; };
+    document.getElementById('vol-b').oninput = function() { if(gains.b) gains.b.gain.value =
+    this.value; };
+    function beeps(f) { init(); const o = audioCtx.createOscillator(); const g =
+    audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.frequency.value = f;
+    g.gain.setValueAtTime(0.1, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.0001,
+    audioCtx.currentTime + 0.1); o.start(); o.stop(audioCtx.currentTime + 0.1); }
+    function setupJog(id) { const el = document.getElementById(id); let sY=0, cR=0;
+    el.addEventListener('touchstart', e => sY = e.touches[0].clientY); el.addEventListener('touchmove',
+    e => { const d = e.touches[0].clientY - sY; cR += d * 0.5; el.style.transform = `rotate(${cR}deg)`;
+    sY = e.touches[0].clientY; }); }
+            setupJog('jog-a'); setupJog('jog-b');
+    function toggleFX(id) { init(); const el = document.getElementById(id);
+    el.classList.toggle('active'); el.innerHTML = el.classList.contains('active') ?
+    el.innerText.replace('OFF','ON') : el.innerText.replace('ON','OFF'); beeps(600); }
+    document.getElementById('cue-a').onclick = () => beeps(1000);
+    document.getElementById('cue-b').onclick = () => beeps(1000);
+        </script>
+    </body>
+    </html>
