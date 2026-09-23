@@ -6,7 +6,7 @@
     user-scalable=no">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-        <title>Pioneered DJ Pro Max</title>
+        <title>Pioneer DJ Pro Max - MIDI Edition</title>
         <style>
             :root { --bg: #0f0f0f; --panel: #222; --accent: #00ffcc; --text: #eee; --danger: #ff4444; }
     body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family:
@@ -40,68 +40,196 @@
     .fx-unit.active { border-color: var(--accent); box-shadow: 0 0 10px var(--accent); color:
     var(--accent); }
     .btn { background: #444; color: white; border: none; padding: 12px 20px; border-radius: 8px;
-    font-size: 0.8rem; font-weight: bold; cursor: pointer; }
+    font-size: 0.8rem; font-weight: bold; cursor: pointer; margin: 5px; }
             .btn-play { background: var(--danger); }
             .btn-play.active { background: #ff8888; box-shadow: 0 0 15px var(--danger); }
+            .load-btn { background: #0055ff; font-size: 0.6rem; padding: 5px 10px; }
+            #midi-status { font-size: 0.7rem; color: #ff4444; }
+            #midi-status.connected { color: var(--accent); }
     @media (max-width: 430px) { .main { flex-direction: column; overflow-y: auto; } .deck,
     .mixer { width: 100%; height: auto; margin-bottom: 15px; } .faders { height: 220px; } }
         </style>
     </head>
     <body>
-    <header><span>PIONEERED PRO MAX</span><span id="status" style="color: var(--accent)">Toca para
-    Iniciar</span></header>
+        <header>
+            <span>PIONEER DJ PRO MAX</span>
+            <span id="midi-status">MIDI: Desconectado</span>
+        </header>
         <div class="main">
-    <div class="deck"><div style="font-size:0.7rem">DECK A</div><div class="jog"
-    id="jog-a"></div><div><button class="btn btn-play" id="play-a">PLAY</button><button class="btn"
-    id="cue-a">CUE</button></div></div>
-    <div class="mixer"><div style="font-size:0.7rem">MIXER</div><div class="faders"><div
-    class="fader-box"><input type="range" class="dj-fader" id="vol-a" min="0" max="1" step="0.01"
-    value="0.8"><span>CH A</span></div><div class="fader-box"><input type="range" class="dj-fader"
-    id="vol-b" min="0" max="1" step="0.01" value="0.8"><span>CH B</span></div></div><div
-    style="display:flex; gap:10px"><button class="btn" onclick="beeps(200)">LOW</button><button
-    class="btn" onclick="beeps(400)">MID</button><button class="btn"
-    onclick="beeps(800)">HI</button></div></div>
-    <div class="deck"><div style="font-size:0.7rem">DECK B</div><div class="jog"
-    id="jog-b"></div><div><button class="btn btn-play" id="play-b">PLAY</button><button class="btn"
-    id="cue-b">CUE</button></div></div>
+            <!-- Deck A -->
+            <div class="deck">
+                <div style="font-size:0.7rem">DECK A</div>
+                <input type="file" id="file-a" style="display:none" accept="audio/*">
+    <button class="btn load-btn" onclick="document.getElementById('file-a').click()">CARGAR
+    CANCIÓN</button>
+                <div class="jog" id="jog-a"></div>
+                <div>
+                    <button class="btn btn-play" id="play-a">PLAY</button>
+                    <button class="btn" id="cue-a">CUE</button>
+                </div>
+            </div>
+            <!-- Mixer -->
+            <div class="mixer">
+                <div style="font-size:0.7rem">MIXER</div>
+                <div class="faders">
+                    <div class="fader-box">
+    <input type="range" class="dj-fader" id="vol-a" min="0" max="1" step="0.01"
+    value="0.8">
+                        <span>CH A</span>
+                    </div>
+                    <div class="fader-box">
+    <input type="range" class="dj-fader" id="vol-b" min="0" max="1" step="0.01"
+    value="0.8">
+                        <span>CH B</span>
+                    </div>
+                </div>
+    <div style="display:flex; gap:10px"><button class="btn"
+    onclick="beeps(200)">LOW</button><button class="btn" onclick="beeps(400)">MID</button><button
+    class="btn" onclick="beeps(800)">HI</button></div>
+            </div>
+            <!-- Deck B -->
+            <div class="deck">
+                <div style="font-size:0.7rem">DECK B</div>
+                <input type="file" id="file-b" style="display:none" accept="audio/*">
+    <button class="btn load-btn" onclick="document.getElementById('file-b').click()">CARGAR
+    CANCIÓN</button>
+                <div class="jog" id="jog-b"></div>
+                <div>
+                    <button class="btn btn-play" id="play-b">PLAY</button>
+                    <button class="btn" id="cue-b">CUE</button>
+                </div>
+            </div>
         </div>
         <div class="fx-bar">
             <div class="fx-unit" id="fx-1" onclick="toggleFX('fx-1')">REVERB<br>OFF</div>
             <div class="fx-unit" id="fx-2" onclick="toggleFX('fx-2')">ECHO<br>OFF</div>
             <div class="fx-unit" id="fx-3" onclick="toggleFX('fx-3')">FILTER<br>OFF</div>
         </div>
+    
         <script>
-    let audioCtx = null, oscs = {a:null, b:null}, gains = {a:null, b:null}, playing = {a:false,
-    b:false};
-    function init() { if(audioCtx) return; audioCtx = new (window.AudioContext ||
-    window.webkitAudioContext)(); document.getElementById('status').innerText = "● LIVE"; gains.a =
-    audioCtx.createGain(); gains.a.connect(audioCtx.destination); gains.b = audioCtx.createGain();
-    gains.b.connect(audioCtx.destination); }
-    function startT(d) { init(); const o = audioCtx.createOscillator(); o.type = 'sawtooth';
-    o.frequency.value = d==='a'?220:222; o.connect(gains[d]); o.start(); oscs[d] = o; }
-            function stopT(d) { if(oscs[d]){ oscs[d].stop(); oscs[d]=null; } }
-    document.getElementById('play-a').onclick = function() { init(); playing.a = !playing.a;
-    this.classList.toggle('active'); playing.a ? startT('a') : stopT('a'); };
-    document.getElementById('play-b').onclick = function() { init(); playing.b = !playing.b;
-    this.classList.toggle('active'); playing.b ? startT('b') : stopT('b'); };
-    document.getElementById('vol-a').oninput = function() { if(gains.a) gains.a.gain.value =
-    this.value; };
-    document.getElementById('vol-b').oninput = function() { if(gains.b) gains.b.gain.value =
-    this.value; };
-    function beeps(f) { init(); const o = audioCtx.createOscillator(); const g =
-    audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.frequency.value = f;
-    g.gain.setValueAtTime(0.1, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.0001,
-    audioCtx.currentTime + 0.1); o.start(); o.stop(audioCtx.currentTime + 0.1); }
-    function setupJog(id) { const el = document.getElementById(id); let sY=0, cR=0;
-    el.addEventListener('touchstart', e => sY = e.touches[0].clientY); el.addEventListener('touchmove',
-    e => { const d = e.touches[0].clientY - sY; cR += d * 0.5; el.style.transform = `rotate(${cR}deg)`;
-    sY = e.touches[0].clientY; }); }
+            let audioCtx = null;
+            const decks = {
+                a: { source: null, buffer: null, gain: null, playing: false, element: 'play-a' },
+                b: { source: null, buffer: null, gain: null, playing: false, element: 'play-b' }
+            };
+    
+            function initAudio() {
+                if (audioCtx) return;
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                decks.a.gain = audioCtx.createGain();
+                decks.a.gain.connect(audioCtx.destination);
+                decks.b.gain = audioCtx.createGain();
+                decks.b.gain.connect(audioCtx.destination);
+            }
+    
+            async function loadTrack(deckKey, file) {
+                initAudio();
+                const arrayBuffer = await file.arrayBuffer();
+                decks[deckKey].buffer = await audioCtx.decodeAudioData(arrayBuffer);
+                alert(`Canción cargada en Deck ${deckKey.toUpperCase()}`);
+            }
+    
+            function togglePlay(deckKey) {
+                initAudio();
+                const d = decks[deckKey];
+                if (!d.buffer) return alert("Carga una canción primero");
+    
+                if (d.playing) {
+                    d.source.stop();
+                    d.playing = false;
+                    document.getElementById(d.element).classList.remove('active');
+                } else {
+                    d.source = audioCtx.createBufferSource();
+                    d.source.buffer = d.buffer;
+                    d.source.connect(d.gain);
+                    d.source.start(0);
+                    d.playing = true;
+                    document.getElementById(d.element).classList.add('active');
+                }
+            }
+    
+            // EVENTOS DE ARCHIVOS
+            document.getElementById('file-a').onchange = (e) => loadTrack('a', e.target.files[0]);
+            document.getElementById('file-b').onchange = (e) => loadTrack('b', e.target.files[0]);
+            document.getElementById('play-a').onclick = () => togglePlay('a');
+            document.getElementById('play-b').onclick = () => togglePlay('b');
+    
+    document.getElementById('vol-a').oninput = (e) => { if(decks.a.gain) decks.a.gain.gain.value
+    = e.target.value; };
+    document.getElementById('vol-b').oninput = (e) => { if(decks.b.gain) decks.b.gain.gain.value
+    = e.target.value; };
+    
+            // --- MOTOR MIDI (XDJ-RR) ---
+            function initMIDI() {
+                if (!navigator.requestMIDIAccess) {
+    document.getElementById('midi-status').innerText = "MIDI: No soportado en este
+    navegador";
+                    return;
+                }
+                navigator.requestMIDIAccess().then(access => {
+                    document.getElementById('midi-status').innerText = "MIDI: Buscando controlador...";
+                    const inputs = access.inputs.values();
+                    for (let input of inputs) {
+                        document.getElementById('midi-status').innerText = "MIDI: XDJ-RR Conectado";
+                        document.getElementById('midi-status').classList.add('connected');
+                        input.onmidimessage = handleMIDIMessage;
+                    }
+                }).catch(err => {
+                    document.getElementById('midi-status').innerText = "MIDI: Error de acceso";
+                });
+            }
+    
+            function handleMIDIMessage(message) {
+                const [status, data1, data2] = message.data;
+                // Mapeo simplificado para XDJ-RR (Ejemplos comunes de Pioneer)
+                // Nota: Los códigos varían según la versión, pero estos son los estándares
+                if (status === 144 || status === 176) { // Note On o Control Change
+                    if (data1 === 60) togglePlay('a'); // Ejemplo: Botón Play A
+                    if (data1 === 62) togglePlay('b'); // Ejemplo: Botón Play B
+                    if (data1 === 1) { // Fader A
+                        document.getElementById('vol-a').value = data2 / 127;
+                        decks.a.gain.gain.value = data2 / 127;
+                    }
+                    if (data1 === 2) { // Fader B
+                        document.getElementById('vol-b').value = data2 / 127;
+                        decks.b.gain.gain.value = data2 / 127;
+                    }
+                }
+            }
+    
+            function beeps(f) {
+                initAudio();
+                const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+                o.connect(g); g.connect(audioCtx.destination);
+                o.frequency.value = f; g.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.1);
+                o.start(); o.stop(audioCtx.currentTime + 0.1);
+            }
+    
+            function toggleFX(id) {
+                const el = document.getElementById(id);
+                el.classList.toggle('active');
+    el.innerHTML = el.classList.contains('active') ? el.innerText.replace('OFF','ON') :
+    el.innerText.replace('ON','OFF');
+                beeps(600);
+            }
+    
+            // Jogs interactivos
+            function setupJog(id) {
+                const el = document.getElementById(id);
+                let sY=0, cR=0;
+                el.addEventListener('touchstart', e => sY = e.touches[0].clientY);
+                el.addEventListener('touchmove', e => {
+                    const d = e.touches[0].clientY - sY;
+                    cR += d * 0.5;
+                    el.style.transform = `rotate(${cR}deg)`;
+                    sY = e.touches[0].clientY;
+                });
+            }
             setupJog('jog-a'); setupJog('jog-b');
-    function toggleFX(id) { init(); const el = document.getElementById(id);
-    el.classList.toggle('active'); el.innerHTML = el.classList.contains('active') ?
-    el.innerText.replace('OFF','ON') : el.innerText.replace('ON','OFF'); beeps(600); }
-    document.getElementById('cue-a').onclick = () => beeps(1000);
-    document.getElementById('cue-b').onclick = () => beeps(1000);
+    
+            window.onload = initMIDI;
         </script>
     </body>
     </html>
+  
